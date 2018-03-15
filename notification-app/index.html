@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Notification App</title>
+    <script>
+    
+    require('./renderer.js')
+    'use strict';
+    
+    function getID(inp) {
+      return document.getElementById(inp)
+    }
+
+    function httpGetAsync(theUrl, callback)
+    {
+    var xmlHttp = new XMLHttpRequest();
+    xmlHttp.onreadystatechange = function() { 
+        if (xmlHttp.readyState == 4 && xmlHttp.status == 200)
+            callback(xmlHttp.responseText);
+      }
+    xmlHttp.open("GET", theUrl, true); // true for asynchronous 
+    xmlHttp.send(null);
+    }
+
+    function httpPostAsync(theUrl, obj, callback)
+    {
+    var xmlHttp = new XMLHttpRequest();
+    xmlHttp.onreadystatechange = function() { 
+        if (xmlHttp.readyState == 4 && xmlHttp.status == 200)
+            callback(xmlHttp.responseText);
+      }
+    xmlHttp.open("POST", theUrl, true); // true for asynchronous 
+    xmlHttp.setRequestHeader("Content-type", "application/json");
+    xmlHttp.send(JSON.stringify(obj));
+    }
+    
+  
+    var urlPost2 = "<sendNotificationToAppHtpp url>";
+    function displayEntries() { 
+    
+    httpGetAsync(urlPost2, function(res){
+         var bdy =  res.split(",");// JSON.parse(body);
+         if (bdy.length == 5) {
+            getID('Comodityname').innerHTML = bdy[0].replace('"', '');
+            getID('setpointval').innerHTML = bdy[1].replace('"', '');
+            getID('recsetpointval').innerHTML = bdy[2].replace('"', '');
+            getID('Conveyorname').innerHTML = bdy[3].split("_")[0].replace('"', '');
+            getID('destination').innerHTML = bdy[4].replace('"', '');
+            console.log(bdy)
+            maximize();
+         }
+         else {
+               console.log(res)
+         }
+       
+      });
+   }
+
+    var MSGURL = "<insertcCommentsFromAppHttp url>"
+    function sendReason() {
+        var obj = {}
+        var message = document.getElementById('reasonmsg').value;
+        var defaultv = getID('defaultmsg').checked;
+        
+        if (message != '') {
+          obj['comment'] = message;
+        }
+        else if (defaultv == true) {
+          obj['comment'] = "No Reason"
+        }
+        
+        if (message == '' && defaultv == false) {
+              getID('reasonmsg').style.border = "1px solid red";
+              event.preventDefault();
+              //displayEntries()
+              return false;
+        }
+        else {
+
+        httpPostAsync(MSGURL, obj, function(res) {
+              if (res.indexOf("OK") !== -1) {
+               
+               
+                let myNotification = new Notification('Success', {
+                    body: 'Comment Submitted'
+                    })
+                    clearFields();
+                    minimize();
+                    
+              }
+              else{
+                console.log(res)
+              }
+              
+        });
+       
+      }
+    };
+
+  function clearFields() {
+    var flds = ['Comodityname', 'setpointval','recsetpointval', 'Conveyorname']
+    var txtarea = getID('reasonmsg')
+    txtarea.style.border ='';
+    txtarea.value = '';
+    getID('defaultmsg').checked = false;
+    for (i=0; i < flds.length; i++) {
+       getID(flds[i]).innerHTML = '';
+    }
+  
+  }
+
+  var windowp = require('electron').remote.getCurrentWindow();
+  function minimize() {
+    windowp.minimize();
+    windowp.hide()
+  }
+
+  function maximize() {
+    windowp.show();
+    windowp.focus();
+    windowp.restore();
+  }
+  
+  setInterval(function() {
+      displayEntries();
+    }, 10000)
+  
+    
+    </script>
+    <style>
+      table, th, td {
+          border: 1px solid black;
+          border-collapse: collapse;
+          padding: 0px;
+          margin: 0px;
+          border: none;
+      }
+      .tab1 table, .tab1 td, .tab1 th {border: 1px solid rgb(218, 213, 213)}
+      
+      td, th {height:10px; width: 10px; }
+      button {background-color: #8d8d91; color:#d9dff0; padding: 6px 8px;
+      border:1; width:70px} /* Gray */ 
+      body { color:#061445;background-color: rgb(210, 226, 240); font-size:12px;
+      font-family:Tahoma, Geneva, sans-serif; }
+      textarea {
+       resize: none;
+      }
+      h3 {font-size:14px}
+      .close {height:20px;width:45px;font-size:10px;font-weight:bold;text-align:center;
+         color:#d9dff0;padding-bottom:15px;}
+      .closediv {position:absolute; right:20px;width:50%;padding:10px;margin-top:20px;}
+      </style>
+  </head>
+  <body onload="displayEntries()" style='-webkit-app-region: no-drag'>
+    <!-- All of the Node.js APIs are available in this renderer process. -->
+     <h3>Conveyor belt running at lower than recommended TPH setpoint</h3>
+    <p>Conveyor: <b><span id='Conveyorname'></span></b> &nbsp --> Destination: <b><span id='destination'></span></b></p>
+    <p>Commodity : <b><span id='Comodityname'></span> </b>
+    <p>Current TPH Setpoint: <b><span id='setpointval'></span></b>
+    </p>Recommended TPH Setpoint : <b><span id='recsetpointval'></span></b> </p>
+   <br>
+    <p><b>Enter reasons for running at lower TPH setpoint:</b></p>
+   
+
+      <table class='tab2'>
+        <tr>
+          <td>
+            <textarea id='reasonmsg' rows="4" cols="40"></textarea>
+          </td>
+          <td style="width:160px;margin-top:10px" align="center"><button class="submit" id='submitbutt' onclick="sendReason()">Submit</button> </td>
+        </tr>
+        <tr>
+          <td colspan='2' height='20px'><b>Don't have any reason.</b> <input type='checkbox' id='defaultmsg'></td>
+        </tr>
+      </table>
+
+      <div id='header' class='closediv'>
+        <button class='close' onclick = "minimize()" >Hide</button>
+      </div>
+    
+  </body>
+</html>
